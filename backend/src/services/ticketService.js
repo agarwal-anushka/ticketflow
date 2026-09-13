@@ -77,11 +77,16 @@ async function deleteTicket(id) {
   await ticketModel.deleteTicket(id);
 }
 
-async function addComment({ ticketId, userId, message }) {
+async function addComment({ ticketId, userId, message }, requester) {
   const ticket = await ticketModel.getTicketById(ticketId);
   if (!ticket) {
     const err = new Error('Ticket not found');
     err.statusCode = 404;
+    throw err;
+  }
+  if (requester.role === 'customer' && ticket.created_by !== requester.id) {
+    const err = new Error('Not authorized to comment on this ticket');
+    err.statusCode = 403;
     throw err;
   }
   return commentModel.addComment({ ticketId, userId, message });

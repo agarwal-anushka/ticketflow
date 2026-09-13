@@ -75,11 +75,10 @@ async function addComment(req, res, next) {
   try {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: 'message is required' });
-    const comment = await ticketService.addComment({
-      ticketId: req.params.id,
-      userId: req.user.id,
-      message,
-    });
+    const comment = await ticketService.addComment(
+      { ticketId: req.params.id, userId: req.user.id, message },
+      req.user
+    );
     res.status(201).json(comment);
   } catch (err) {
     next(err);

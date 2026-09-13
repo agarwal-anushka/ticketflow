@@ -28,19 +28,25 @@ describe('authService.register', () => {
     expect(result.token).toBeDefined();
   });
 
-  test('prevents self-registration as admin', async () => {
-    userModel.findByEmail.mockResolvedValue(null);
-    bcrypt.hash.mockResolvedValue('hashed_pw');
-    userModel.createUser.mockImplementation((data) =>
-      Promise.resolve({ id: 3, ...data, passwordHash: undefined })
-    );
+  test('ignores any role sent in the request body, including admin and agent', async () => {
+  userModel.findByEmail.mockResolvedValue(null);
+  bcrypt.hash.mockResolvedValue('hashed_pw');
+  userModel.createUser.mockImplementation((data) =>
+    Promise.resolve({ id: 3, ...data, passwordHash: undefined })
+  );
 
-    await authService.register({ name: 'A', email: 'a@b.com', password: 'pw', role: 'admin' });
+  await authService.register({ name: 'A', email: 'a@b.com', password: 'pw', role: 'admin' });
+  await authService.register({ name: 'B', email: 'b@c.com', password: 'pw', role: 'agent' });
 
-    expect(userModel.createUser).toHaveBeenCalledWith(
-      expect.objectContaining({ role: 'customer' })
-    );
-  });
+  expect(userModel.createUser).toHaveBeenNthCalledWith(
+    1,
+    expect.objectContaining({ role: 'customer' })
+  );
+  expect(userModel.createUser).toHaveBeenNthCalledWith(
+    2,
+    expect.objectContaining({ role: 'customer' })
+  );
+});
 });
 
 describe('authService.login', () => {
