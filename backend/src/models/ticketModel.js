@@ -20,7 +20,7 @@ async function getTicketById(id) {
   return rows[0] || null;
 }
 
-async function listTickets({ status, priority, assigneeId }) {
+async function listTickets({ status, priority, assigneeId, createdBy }) {
   let query = `
     SELECT t.*, u.name AS assignee_name
     FROM tickets t
@@ -40,6 +40,10 @@ async function listTickets({ status, priority, assigneeId }) {
   if (assigneeId) {
     query += ' AND t.assignee_id = ?';
     params.push(assigneeId);
+  }
+  if (createdBy) {
+    query += ' AND t.created_by = ?';
+    params.push(createdBy);
   }
   query += ' ORDER BY t.created_at DESC';
 

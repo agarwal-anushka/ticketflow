@@ -22,7 +22,7 @@ async function createTicket(req, res, next) {
 async function listTickets(req, res, next) {
   try {
     const { status, priority, assigneeId } = req.query;
-    const tickets = await ticketService.listTickets({ status, priority, assigneeId });
+    const tickets = await ticketService.listTickets({ status, priority, assigneeId }, req.user);
     res.json(tickets);
   } catch (err) {
     next(err);
@@ -31,7 +31,7 @@ async function listTickets(req, res, next) {
 
 async function getTicket(req, res, next) {
   try {
-    const ticket = await ticketService.getTicketWithComments(req.params.id);
+    const ticket = await ticketService.getTicketWithComments(req.params.id, req.user);
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     res.json(ticket);
   } catch (err) {

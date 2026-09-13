@@ -4,7 +4,7 @@ const { signToken } = require('../utils/jwt');
 
 const SALT_ROUNDS = 10;
 
-async function register({ name, email, password, role }) {
+async function register({ name, email, password }) {
   const existing = await userModel.findByEmail(email);
   if (existing) {
     const err = new Error('Email already registered');
@@ -13,11 +13,15 @@ async function register({ name, email, password, role }) {
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  // Deny-by-default: public registration can only ever create a
+  // 'customer' account, regardless of what the request body sends.
+  // Agent/admin accounts are provisioned out-of-band, never chosen
+  // by the registrant.
   const user = await userModel.createUser({
     name,
     email,
     passwordHash,
-    role: role === 'admin' ? 'customer' : role, // prevent self-registering as admin
+    role: 'customer',
   });
 
   const token = signToken({ id: user.id, role: user.role });

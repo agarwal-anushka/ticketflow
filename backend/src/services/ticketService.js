@@ -7,13 +7,25 @@ async function createTicket(data) {
   return ticketModel.createTicket(data);
 }
 
-async function listTickets(filters) {
-  return ticketModel.listTickets(filters);
+async function listTickets(filters, requester) {
+  // Customers can only ever see their own tickets. Agents/admins see
+  // everything (optionally scoped by their own query filters).
+  const scoped = requester.role === 'customer'
+    ? { ...filters, createdBy: requester.id }
+    : filters;
+  return ticketModel.listTickets(scoped);
 }
 
-async function getTicketWithComments(id) {
+async function getTicketWithComments(id, requester) {
   const ticket = await ticketModel.getTicketById(id);
   if (!ticket) return null;
+
+  if (requester.role === 'customer' && ticket.created_by !== requester.id) {
+    const err = new Error('Not authorized to view this ticket');
+    err.statusCode = 403;
+    throw err;
+  }
+
   const comments = await commentModel.getCommentsByTicket(id);
   const auditLogs = await auditModel.getAuditLogsForTicket(id);
   return { ...ticket, comments, auditLogs };

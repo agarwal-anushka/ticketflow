@@ -33,6 +33,7 @@ async function getLeastBusyAgent(connection) {
     GROUP BY u.id
     ORDER BY open_ticket_count ASC
     LIMIT 1
+    FOR UPDATE
   `);
   return rows[0] || null;
 }
