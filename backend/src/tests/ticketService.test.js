@@ -5,7 +5,7 @@ jest.mock('../models/auditModel');
 const ticketModel = require('../models/ticketModel');
 const commentModel = require('../models/commentModel');
 const auditModel = require('../models/auditModel');
-const ticketService = require('./ticketService');
+const ticketService = require('../services/ticketService');
 
 const customer = (id) => ({ id, role: 'customer' });
 const agent = (id) => ({ id, role: 'agent' });
