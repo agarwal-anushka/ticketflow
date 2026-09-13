@@ -7,7 +7,7 @@ the kind of case-management tooling used in enterprise CRM products.
 
 It's a complete system, not a CRUD demo: JWT auth with role-based access,
 a live Kanban board with optimistic UI, transaction-safe auto-assignment,
-a full audit trail, and 33 automated tests covering the logic that
+a full audit trail, and 40 automated tests covering the logic that
 actually matters.
 
 ---
@@ -29,10 +29,11 @@ actually matters.
 
 | Area | What it does |
 |---|---|
-| **Auth** | JWT-based login/register with bcrypt password hashing and three roles: `admin`, `agent`, `customer` |
+| **Auth** | JWT-based login/register with bcrypt password hashing and three roles: `admin`, `agent`, `customer`. The role is always assigned by the server — nothing in the request body can set or elevate it |
+| **Access control** | Customers can only view/comment on tickets they created; agents and admins can access any ticket. Enforced at the service layer on every read and write, not just hidden in the UI |
 | **Tickets** | Full CRUD with status/priority filtering |
-| **Kanban board** | Drag tickets between Open → In Progress → Resolved → Closed. Updates are optimistic — the UI moves instantly and rolls back automatically if the save fails |
-| **Auto-assignment** | One click routes a ticket to whichever active agent currently has the fewest open tickets. Wrapped in a MySQL transaction so two simultaneous assignments can't race each other onto the same agent |
+| **Kanban board / List view** | Toggle between a drag-and-drop board (Open → In Progress → Resolved → Closed, optimistic UI with automatic rollback on failure) and a filterable list view. Dragging is available to agents/admins; customers get a read-only board |
+| **Auto-assignment** | One click routes a ticket to whichever active agent currently has the fewest open tickets. Wrapped in a MySQL transaction with a row lock on the agent lookup, so two simultaneous assignments can't race each other onto the same agent |
 | **Comments** | Threaded discussion per ticket |
 | **Audit log** | Every status/priority/assignee change is recorded — who changed it, from what, to what, and when |
 | **Analytics** | Ticket counts by status and priority, plus average resolution time, charted with Recharts |
@@ -56,7 +57,7 @@ routes → controllers → services → models → MySQL
 
 - **models/** — raw parameterized SQL queries, no ORM
 - **services/** — business logic; this is where the auto-assignment
-  transaction and audit-logging live
+  transaction, per-request access-control checks, and audit-logging live
 - **controllers/** — thin request/response glue
 - **middleware/** — auth, role-based gating, structured request logs, a
   single centralized error handler
@@ -74,7 +75,7 @@ ticketflow/
       controllers/
       middleware/                 # authMiddleware, roleMiddleware, logger, error handler
       routes/
-      tests/                      # 27 Jest tests (unit + Supertest integration)
+      tests/                      # 34 Jest tests (unit + Supertest integration)
     server.js
   frontend/
     src/
@@ -107,6 +108,7 @@ them directly; register real accounts through the app instead.
 ```bash
 cd backend
 cp .env.example .env    # add your MySQL credentials + a JWT secret
+                         # (JWT_SECRET also needs to exist for `npm test` to run)
 npm install
 npm run dev              # → http://localhost:5000
 ```
@@ -123,7 +125,8 @@ npm run dev               # → http://localhost:5173
 ## Trying it out
 
 1. Open `http://localhost:5173` — you'll land on the marketing page.
-2. Click **Get started** and register an account (defaults to `customer`).
+2. Click **Get started** and register an account (always created as
+   `customer` — there's no way to self-select a different role).
 3. Create a ticket from the dashboard and watch it appear on the board.
 4. To see auto-assignment and analytics in action, register a second
    account and promote it to `agent` directly in MySQL:
@@ -133,16 +136,22 @@ npm run dev               # → http://localhost:5173
 5. Log in as that agent, open the ticket, and click **Auto-assign to
    least-busy agent**. Then check the audit log at the bottom of the
    ticket page.
+6. Log back in as the original customer and confirm they can only see
+   their own ticket — a direct link to someone else's ticket ID returns
+   a 403, not the ticket.
 
 ## Testing
 
 ```bash
-cd backend && npm test     # 27 tests — Jest, DB layer mocked, no live DB needed
+cd backend && npm test     # 34 tests — Jest, DB layer mocked, no live DB needed
 cd frontend && npm test    # 6 tests — Vitest + React Testing Library
 ```
 
 Backend tests cover JWT signing/verification, auth and role middleware,
-the register/login service logic, and — most importantly — the
+the register/login service logic (including that any role sent in the
+request body — `admin`, `agent`, or otherwise — is always ignored),
+ticket-level access control (a customer can only read or comment on
+tickets they created; agents and admins can access any), and the
 auto-assignment transaction: it's tested for the happy path, no
 available agents, a missing ticket, and a mid-transaction DB failure,
 confirming rollback and connection release happen correctly in every case.
@@ -157,13 +166,20 @@ Things worth knowing (and worth being asked about):
   token is ever stolen.
 - **Auto-assignment uses a MySQL transaction, not a queue.** Correct and
   sufficient at single-database scale. At high throughput, a queue-based
-  assignment worker would scale better than a row lock on `tickets`.
+  assignment worker would scale better than a row lock on `users`.
+- **Access control is enforced per-request at the service layer, not
+  via database-level security.** Correct and tested for every current
+  route, but it means each new query touching `tickets` or `comments`
+  has to remember to scope by `created_by` for customers — there's no
+  database-level backstop if a future endpoint forgets. A larger system
+  might add Postgres row-level security, or a query layer that can't
+  omit the scope, as a second line of defense.
 - **No pagination on the ticket list.** Fine for a demo dataset; would
   need `LIMIT`/`OFFSET` or cursor pagination in production.
 - **Tests mock the database layer** rather than requiring a live MySQL
-  instance, so the suite runs anywhere with zero setup. A fuller CI
-  pipeline would add a small number of true integration tests against a
-  real test database on top of these.
-
-
-
+  instance, so the suite runs anywhere with zero setup beyond a JWT
+  secret. A fuller CI pipeline would add a small number of true
+  integration tests against a real test database on top of these —
+  in particular, the auto-assignment row lock is only exercised
+  against mocks today, so its behavior under real concurrent
+  transactions isn't covered yet.
