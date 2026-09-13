@@ -300,6 +300,34 @@ a { color: inherit; }
   border-radius: var(--radius);
 }
 
+/* ================= Dashboard header / view toggle ================= */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.1rem;
+}
+.dashboard-header h1 { margin: 0; }
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.view-toggle button {
+  background: var(--surface);
+  color: var(--text-muted);
+  border: none;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.view-toggle button + button { border-left: 1px solid var(--line); }
+.view-toggle button:hover { color: var(--text); }
+.view-toggle button.active { background: var(--text); color: #fff; }
+
 /* ================= New ticket form ================= */
 .new-ticket-form {
   background: var(--surface);
