@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import TicketCard from './TicketCard';
 
 const COLUMNS = [
@@ -10,6 +11,8 @@ const COLUMNS = [
 ];
 
 export default function KanbanBoard() {
+  const { user } = useAuth();
+  const canDrag = user.role === 'admin' || user.role === 'agent';
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,7 +45,7 @@ export default function KanbanBoard() {
 
   async function handleDrop(e, newStatus) {
     e.preventDefault();
-    if (!draggedTicket || draggedTicket.status === newStatus) return;
+    if (!canDrag || !draggedTicket || draggedTicket.status === newStatus) return;
 
     const ticketId = draggedTicket.id;
     const previousStatus = draggedTicket.status;
@@ -84,7 +87,7 @@ export default function KanbanBoard() {
                 <TicketCard
                   key={ticket.id}
                   ticket={ticket}
-                  draggable
+                  draggable={canDrag}
                   onDragStart={handleDragStart}
                 />
               ))}
