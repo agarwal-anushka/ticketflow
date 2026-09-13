@@ -49,6 +49,10 @@ CREATE TABLE audit_logs (
 
 CREATE INDEX idx_tickets_status ON tickets(status);
 CREATE INDEX idx_tickets_assignee ON tickets(assignee_id);
+-- Every customer-scoped ticket list/read now filters on created_by
+-- (see ticketService.listTickets / getTicketWithComments), so this
+-- needs an index just as much as status/assignee do.
+CREATE INDEX idx_tickets_created_by ON tickets(created_by);
 CREATE INDEX idx_comments_ticket ON comments(ticket_id);
 
 -- Seed a couple of agents for testing auto-assignment
