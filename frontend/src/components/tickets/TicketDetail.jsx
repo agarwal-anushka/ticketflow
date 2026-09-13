@@ -10,13 +10,20 @@ export default function TicketDetail() {
   const { user } = useAuth();
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [actionError, setActionError] = useState(null);
 
   const fetchTicket = useCallback(async () => {
     setLoading(true);
-    const { data } = await api.get(`/tickets/${id}`);
-    setTicket(data);
-    setLoading(false);
+    try {
+      const { data } = await api.get(`/tickets/${id}`);
+      setTicket(data);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err.response?.data?.error || 'Failed to load ticket');
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -42,6 +49,7 @@ export default function TicketDetail() {
   }
 
   if (loading) return <p>Loading ticket...</p>;
+  if (loadError) return <p className="form-error">{loadError}</p>;
   if (!ticket) return <p>Ticket not found.</p>;
 
   const canManage = user.role === 'admin' || user.role === 'agent';
