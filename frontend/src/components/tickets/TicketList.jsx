@@ -7,15 +7,22 @@ export default function TicketList() {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
-    const params = {};
-    if (statusFilter) params.status = statusFilter;
-    if (priorityFilter) params.priority = priorityFilter;
-    const { data } = await api.get('/tickets', { params });
-    setTickets(data);
-    setLoading(false);
+    try {
+      const params = {};
+      if (statusFilter) params.status = statusFilter;
+      if (priorityFilter) params.priority = priorityFilter;
+      const { data } = await api.get('/tickets', { params });
+      setTickets(data);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to load tickets');
+    } finally {
+      setLoading(false);
+    }
   }, [statusFilter, priorityFilter]);
 
   useEffect(() => {
@@ -40,6 +47,7 @@ export default function TicketList() {
           <option value="urgent">Urgent</option>
         </select>
       </div>
+      {error && <p className="form-error">{error}</p>}
       {loading ? (
         <p>Loading...</p>
       ) : (
