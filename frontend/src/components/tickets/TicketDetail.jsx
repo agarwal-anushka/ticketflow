@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import CommentThread from '../comments/CommentThread';
@@ -8,10 +8,12 @@ import CommentForm from '../comments/CommentForm';
 export default function TicketDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [actionError, setActionError] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchTicket = useCallback(async () => {
     setLoading(true);
@@ -48,11 +50,24 @@ export default function TicketDetail() {
     }
   }
 
+  async function handleDelete() {
+    if (!window.confirm('Delete this ticket permanently? This cannot be undone.')) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/tickets/${id}`);
+      navigate('/dashboard');
+    } catch (err) {
+      setActionError(err.response?.data?.error || 'Failed to delete ticket');
+      setDeleting(false);
+    }
+  }
+
   if (loading) return <p>Loading ticket...</p>;
   if (loadError) return <p className="form-error">{loadError}</p>;
   if (!ticket) return <p>Ticket not found.</p>;
 
   const canManage = user.role === 'admin' || user.role === 'agent';
+  const canDelete = user.role === 'admin';
 
   return (
     <div className="ticket-detail">
@@ -74,6 +89,15 @@ export default function TicketDetail() {
             <option value="closed">Closed</option>
           </select>
           <button onClick={handleAutoAssign}>Auto-assign to least-busy agent</button>
+          {canDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="btn-danger"
+            >
+              {deleting ? 'Deleting...' : 'Delete ticket'}
+            </button>
+          )}
         </div>
       )}
 
