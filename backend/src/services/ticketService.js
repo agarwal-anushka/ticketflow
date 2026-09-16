@@ -33,14 +33,17 @@ async function getTicketWithComments(id, requester) {
 
 /**
  * Updates a single field on a ticket and records the change in the audit log.
- * Uses a transaction so the update + audit write are atomic.
+ * Uses a transaction so the update + audit write are atomic. The
+ * pre-update read happens on the same transactional connection, not a
+ * separate pooled one, so the oldValue captured for the audit log is
+ * consistent with what's being changed under the lock.
  */
 async function updateTicket(ticketId, field, newValue, actingUserId) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
 
-    const ticket = await ticketModel.getTicketById(ticketId);
+    const ticket = await ticketModel.getTicketById(ticketId, connection);
     if (!ticket) {
       const err = new Error('Ticket not found');
       err.statusCode = 404;
