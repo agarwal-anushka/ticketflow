@@ -6,7 +6,10 @@ const auditModel = require('../models/auditModel');
 /**
  * Assigns a ticket to the least-busy active agent.
  * Wrapped in a transaction so concurrent calls don't both read the
- * same "least busy" agent before either write commits.
+ * same "least busy" agent before either write commits. Every read
+ * and write in this function runs on the same transactional
+ * connection — including the ticket lookup, which previously ran on
+ * a separate pooled connection outside the transaction.
  */
 async function autoAssignTicket(ticketId, actingUserId) {
   const connection = await pool.getConnection();
@@ -20,7 +23,7 @@ async function autoAssignTicket(ticketId, actingUserId) {
       throw err;
     }
 
-    const ticket = await ticketModel.getTicketById(ticketId);
+    const ticket = await ticketModel.getTicketById(ticketId, connection);
     if (!ticket) {
       const err = new Error('Ticket not found');
       err.statusCode = 404;
