@@ -448,6 +448,14 @@ a { color: inherit; }
   transition: background 0.12s ease;
 }
 .ticket-actions button:hover { background: #000; }
+.ticket-actions button.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid rgba(184,84,63,0.4);
+  margin-left: auto;
+}
+.ticket-actions button.btn-danger:hover { background: rgba(184,84,63,0.08); }
+.ticket-actions button.btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ================= Comments ================= */
 .comment-thread { margin: 0.9rem 0; }
