@@ -8,8 +8,9 @@ async function createTicket({ title, description, priority, createdBy }) {
   return getTicketById(result.insertId);
 }
 
-async function getTicketById(id) {
-  const [rows] = await pool.query(
+async function getTicketById(id, connection) {
+  const conn = connection || pool;
+  const [rows] = await conn.query(
     `SELECT t.*, u.name AS assignee_name, c.name AS created_by_name
      FROM tickets t
      LEFT JOIN users u ON t.assignee_id = u.id
