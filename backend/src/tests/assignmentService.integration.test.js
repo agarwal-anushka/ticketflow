@@ -17,6 +17,12 @@
  *   DB_USER=root DB_PASSWORD=... DB_NAME=ticketflow_test npx jest assignmentService.integration
  *
  * against a throwaway database created from backend/sql/schema.sql.
+ *
+ * Note: schema.sql seeds its own demo agents (Priya, Rahul). This
+ * test deactivates every pre-existing agent before creating its own
+ * two, so getLeastBusyAgent's candidate pool is fully controlled by
+ * this test and the assertions aren't dependent on what else has
+ * been seeded into the database.
  */
 
 const runIntegration = process.env.RUN_INTEGRATION_TESTS === '1';
@@ -30,6 +36,7 @@ describeIntegration('assignmentService.autoAssignTicket (real MySQL, concurrency
   let customerId;
   let ticketAId;
   let ticketBId;
+  let deactivatedAgentIds;
 
   beforeAll(async () => {
     // Fresh module registry + real (unmocked) db config for this file only.
@@ -37,7 +44,21 @@ describeIntegration('assignmentService.autoAssignTicket (real MySQL, concurrency
     ({ pool } = require('../config/db'));
     assignmentService = require('../services/assignmentService');
 
-    const uniq = Date.now();
+    // Deactivate any pre-existing agents (e.g. schema.sql's seeded demo
+    // agents) so this test fully controls getLeastBusyAgent's candidate
+    // pool — otherwise an unrelated agent with fewer open tickets could
+    // win the pick and the assertions below would be meaningless.
+    const [existingAgents] = await pool.query(
+      "SELECT id FROM users WHERE role = 'agent' AND is_active = TRUE"
+    );
+    deactivatedAgentIds = existingAgents.map((r) => r.id);
+    if (deactivatedAgentIds.length > 0) {
+      await pool.query(
+        "UPDATE users SET is_active = FALSE WHERE role = 'agent' AND is_active = TRUE"
+      );
+    }
+
+    const uniq = `${Date.now()}-${process.pid}`;
 
     const [agentA] = await pool.query(
       "INSERT INTO users (name, email, password_hash, role, is_active) VALUES (?, ?, 'x', 'agent', TRUE)",
@@ -74,6 +95,11 @@ describeIntegration('assignmentService.autoAssignTicket (real MySQL, concurrency
     await pool.query('DELETE FROM audit_logs WHERE ticket_id IN (?, ?)', [ticketAId, ticketBId]);
     await pool.query('DELETE FROM tickets WHERE id IN (?, ?)', [ticketAId, ticketBId]);
     await pool.query('DELETE FROM users WHERE id IN (?, ?, ?)', [agentAId, agentBId, customerId]);
+    // Restore whatever agents this test deactivated, so it doesn't leave
+    // side effects behind for any other test or manual inspection of the DB.
+    if (deactivatedAgentIds && deactivatedAgentIds.length > 0) {
+      await pool.query('UPDATE users SET is_active = TRUE WHERE id IN (?)', [deactivatedAgentIds]);
+    }
     await pool.end();
   });
 
