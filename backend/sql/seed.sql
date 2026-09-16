@@ -42,7 +42,7 @@ SELECT id, @customer_id, 'Chrome on Windows 11, but I also tried Firefox with th
 FROM tickets WHERE title = 'Invoice shows wrong tax amount';
 
 INSERT INTO comments (ticket_id, user_id, message)
-SELECT id, @rahul_id, 'Fixed — was a caching issue on the tax rate lookup for your region. Reissued the corrected invoice.'
+SELECT id, @priya_id, 'Fixed — updated the copy and redeployed. Thanks for flagging it!'
 FROM tickets WHERE title = 'Typo in welcome email';
 
 INSERT INTO audit_logs (ticket_id, changed_by, field_changed, old_value, new_value)
