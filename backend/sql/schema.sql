@@ -55,8 +55,9 @@ CREATE INDEX idx_tickets_assignee ON tickets(assignee_id);
 CREATE INDEX idx_tickets_created_by ON tickets(created_by);
 CREATE INDEX idx_comments_ticket ON comments(ticket_id);
 
--- Seed a couple of agents for testing auto-assignment
-INSERT INTO users (name, email, password_hash, role) VALUES
-('Admin One', 'admin@ticketflow.com', '$2b$10$replace_with_real_hash', 'admin'),
-('Agent Priya', 'priya@ticketflow.com', '$2b$10$replace_with_real_hash', 'agent'),
-('Agent Rahul', 'rahul@ticketflow.com', '$2b$10$replace_with_real_hash', 'agent');
+-- No demo data here on purpose: schema.sql only creates structure.
+-- Demo accounts and sample tickets live in seed.sql, run separately —
+-- keeping this file structure-only avoids accidentally seeding
+-- unusable placeholder-password accounts (e.g. into a live/production
+-- database) that then compete with real demo accounts in features
+-- like auto-assignment's least-busy-agent lookup.
