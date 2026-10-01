@@ -3,8 +3,7 @@
 
 ![CI](https://github.com/agarwal-anushka/ticketflow/actions/workflows/ci.yml/badge.svg)
 
-A full-stack customer support ticketing platform — built as a portfolio
-project for a Software Engineering internship application, modeled after
+A full-stack customer support ticketing platform, modeled after
 the kind of case-management tooling used in enterprise CRM products.
 
 It's a complete system, not a CRUD demo: JWT auth with role-based access,
